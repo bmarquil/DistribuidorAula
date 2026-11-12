@@ -26,6 +26,7 @@ Una aplicació web interactiva, ràpida i intuïtiva dissenyada per a mestres i 
 ## 🚀 Com utilitzar l'aplicació
 
 Aquesta aplicació funciona completament al navegador sense necessitat d'instal·lar res ni de connexió a bases de dades externes:
+(https://bmarquil.github.io/DistribuidorAula/)
 
 1. Descarrega el fitxer `index.html` d'aquest repositori.
 2. Obre'l amb qualsevol navegador web modern (Chrome, Firefox, Safari, Edge).
