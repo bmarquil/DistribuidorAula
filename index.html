@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Distribucions d'Aula</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .drag-over {
+            border-color: #0284c7 !important;
+            background-color: #e0f2fe !important;
+            transform: scale(1.02);
+        }
+        .student-card {
+            touch-action: none;
+            user-select: none;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-area {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+            body {
+                background: white !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 no-print shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-brand-500 text-white p-2 rounded-xl shadow-md">
+                    <i class="fa-solid fa-[#ffffff] fa-shapes text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-slate-800 leading-tight">Distribuïdor d'Aula</h1>
+                    <p class="text-xs text-slate-500">Primària i Educació Infantil</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-[#ffffff] fa-print"></i>
+                    <span>Imprimir / Desar PDF</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- App Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6">
+
+        <!-- Sidebar / Controls (Left Side) -->
+        <aside class="w-full lg:w-80 flex flex-col gap-6 no-print flex-shrink-0">
+            
+            <!-- Entrada de Noms -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-[#0284c7] fa-users text-brand-600"></i>
+                        Alumnat (<span id="student-count">0</span>)
+                    </h2>
+                    <button onclick="loadSampleData()" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Exemple</button>
+                </div>
+                <p class="text-xs text-slate-500">Enganxa o escriu els noms separats per línies o comes:</p>
+                <textarea id="student-input" rows="5" class="w-full p-3 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition resize-none bg-slate-50" placeholder="Ex:&#10;Maria&#10;Joan&#10;Berta&#10;Laia"></textarea>
+                <button onclick="processStudents()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm shadow-sm transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-[#ffffff] fa-rotate"></i> Actualitzar Llista
+                </button>
+            </div>
+
+            <!-- Secció de Restriccions -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3">
+                <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-[#ef4444] fa-user-slash text-red-500"></i>
+                    Restriccions (No junts)
+                </h2>
+                <p class="text-xs text-slate-500">Evita que determinats alumnes siguin a la mateixa taula/grup:</p>
+                
+                <div class="flex flex-col gap-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="rule-student-1" class="text-xs p-2 border border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-brand-500">
+                            <option value="">Alumne 1...</option>
+                        </select>
+                        <select id="rule-student-2" class="text-xs p-2 border border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-brand-500">
+                            <option value="">Alumne 2...</option>
+                        </select>
+                    </div>
+                    <button onclick="addRestriction()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg text-xs transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-[#475569] fa-plus"></i> Afegir Restricció
+                    </button>
+                </div>
+
+                <!-- Llista de restriccions actuals -->
+                <div id="restrictions-list" class="flex flex-col gap-1.5 mt-1 max-h-36 overflow-y-auto">
+                    <!-- Es renderitzen dinàmicament -->
+                </div>
+            </div>
+
+            <!-- Plantilles de Distribució -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4">
+                <h2 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-[#0284c7] fa-cubes text-brand-600"></i>
+                    Tipus de Distribució
+                </h2>
+                <div class="grid grid-cols-2 gap-2" id="layout-preset-buttons">
+                    <button onclick="changeLayout('groups-4')" class="layout-btn active p-3 border rounded-xl flex flex-col items-center gap-2 text-xs font-medium text-slate-700 hover:border-brand-500 hover:bg-brand-50 transition text-center border-brand-500 bg-brand-50">
+                        <i class="fa-solid fa-[#0284c7] fa-border-all text-lg text-brand-600"></i>
+                        Grups de 4
+                    </button>
+                    <button onclick="changeLayout('groups-3')" class="layout-btn p-3 border border-slate-200 rounded-xl flex flex-col items-center gap-2 text-xs font-medium text-slate-700 hover:border-brand-500 hover:bg-brand-50 transition text-center">
+                        <i class="fa-solid fa-[#475569] fa-grip-lines text-lg text-slate-500"></i>
+                        Grups de 3 (línia)
+                    </button>
+                    <button onclick="changeLayout('groups-6')" class="layout-btn p-3 border border-slate-200 rounded-xl flex flex-col items-center gap-2 text-xs font-medium text-slate-700 hover:border-brand-500 hover:bg-brand-50 transition text-center">
+                        <i class="fa-solid fa-[#475569] fa-table-cells text-lg text-slate-500"></i>
+                        Grups de 6
+                    </button>
+                    <button onclick="changeLayout('pairs')" class="layout-btn p-3 border border-slate-200 rounded-xl flex flex-col items-center gap-2 text-xs font-medium text-slate-700 hover:border-brand-500 hover:bg-brand-50 transition text-center">
+                        <i class="fa-solid fa-[#475569] fa-user-friends text-lg text-slate-500"></i>
+                        Parelles
+                    </button>
+                    <button onclick="changeLayout('u-shape')" class="layout-btn p-3 border border-slate-200 rounded-xl flex flex-col items-center gap-2 text-xs font-medium text-slate-700 hover:border-brand-500 hover:bg-brand-50 transition text-center">
+                        <i class="fa-solid fa-[#475569] fa-magnet text-lg text-slate-500"></i>
+                        Forma de U
+                    </button>
+                    <button onclick="changeLayout('individual')" class="layout-btn p-3 border border-slate-200 rounded-xl flex flex-col items-center gap-2 text-xs font-medium text-slate-700 hover:border-brand-500 hover:bg-brand-50 transition text-center">
+                        <i class="fa-solid fa-[#475569] fa-align-justify text-lg text-slate-500"></i>
+                        Fileres Indiv.
+                    </button>
+                </div>
+
+                <div class="border-t border-slate-100 pt-3 mt-1 flex flex-col gap-2">
+                    <button onclick="shuffleStudentsWithRules()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-medium py-2.5 rounded-xl text-sm shadow-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-[#ffffff] fa-shuffle"></i> Barrejar (amb restriccions)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Elements d'aula -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3">
+                <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-[#0284c7] fa-sliders text-brand-600"></i>
+                    Opcions Visuals
+                </h2>
+                <label class="flex items-center gap-3 cursor-pointer text-xs font-medium text-slate-700">
+                    <input type="checkbox" id="toggle-pissarra" checked onchange="togglePissarra()" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500">
+                    Mostrar Pissarra / Davant
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer text-xs font-medium text-slate-700">
+                    <input type="checkbox" id="toggle-numeracio" checked onchange="renderGrid()" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500">
+                    Mostrar Número de Taula/Equip
+                </label>
+            </div>
+
+        </aside>
+
+        <!-- Main Classroom View (Right Side) -->
+        <section class="flex-1 flex flex-col gap-4">
+            
+            <!-- Classroom Header Banner -->
+            <div id="pissarra-container" class="bg-slate-800 text-white p-3 rounded-xl shadow-md text-center border-b-4 border-emerald-600 flex items-center justify-center gap-2 transition-all">
+                <i class="fa-solid fa-[#10b981] fa-chalkboard text-emerald-400"></i>
+                <span class="font-bold tracking-wide uppercase text-xs sm:text-sm">Pissarra / Davant de l'Aula</span>
+            </div>
+
+            <!-- Canvas/Grid Container -->
+            <div class="print-area bg-white border border-slate-200 rounded-2xl p-4 sm:p-8 min-h-[550px] flex-1 flex flex-col justify-center items-center shadow-sm relative overflow-hidden">
+                
+                <!-- Helper Notice -->
+                <div class="absolute top-3 left-4 text-xs text-slate-400 no-print flex items-center gap-1.5">
+                    <i class="fa-solid fa-[#94a3b8] fa-hand-pointer"></i> Arrastra i deixa anar qualsevol nom per moure o intercanviar posicions
+                </div>
+
+                <!-- Grid Canvas -->
+                <div id="classroom-grid" class="w-full flex flex-wrap justify-center gap-6 py-6 transition-all duration-300">
+                    <!-- Dynamic layout renders here -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden flex-col items-center text-center p-8 text-slate-400">
+                    <i class="fa-solid fa-[#cbd5e1] fa-users-slash text-4xl mb-3"></i>
+                    <p class="font-medium text-slate-600">No hi ha alumnes a l'aula</p>
+                    <p class="text-xs">Afegeix una llista de noms a l'esquerra per començar.</p>
+                </div>
+            </div>
+            
+            <!-- Footer Info -->
+            <footer class="text-xs text-slate-400 text-center py-2 flex flex-col sm:flex-row justify-center items-center gap-1 sm:gap-4">
+                <span>Distribuïdor de taules de Primària • Modificable i a punt per imprimir</span>
+                <span class="hidden sm:inline">•</span>
+                <span class="font-medium text-slate-500">
+                    App creada per <strong>Bernat Marquilles</strong> 
+                    (<a href="https://github.com/bmarquil" target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:underline inline-flex items-center gap-1">
+                        <i class="fa-brands fa-github text-slate-700"></i>bmarquil
+                    </a>)
+                </span>
+            </footer>
+        </section>
+
+    </main>
+
+    <!-- Custom Notification Box -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2 text-sm">
+        <i id="toast-icon" class="fa-solid fa-[#10b981] fa-circle-check text-emerald-400"></i>
+        <span id="toast-message">Notificació</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // State Management
+        let students = [];
+        let restrictions = []; // Array of arrays: [ ['Maria', 'Berta'], ... ]
+        let currentLayout = 'groups-4';
+        let draggedIndex = null;
+        let touchDragElement = null;
+
+        // Sample initial data
+        const sampleNames = [
+            "Maria", "Berta", "Marc", "Laia", "Pau", "Júlia", 
+            "Pol", "Martina", "Biel", "Emma", "Àlex", "Lucia", 
+            "Arnau", "Aina", "Hugo", "Carla", "Jan", "Noa"
+        ];
+
+        // Initialize App
+        window.onload = function() {
+            loadSampleData();
+        };
+
+        function loadSampleData() {
+            document.getElementById('student-input').value = sampleNames.join('\n');
+            restrictions = [ ['Maria', 'Berta'] ]; // Exemple per defecte
+            processStudents();
+            renderRestrictions();
+            showToast("Dades d'exemple carregades (Maria i Berta no junts)");
+        }
+
+        function processStudents() {
+            const rawText = document.getElementById('student-input').value;
+            students = rawText
+                .split(/[\n,]+/)
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+
+            document.getElementById('student-count').innerText = students.length;
+            updateSelectDropdowns();
+
+            if(students.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('classroom-grid').innerHTML = '';
+            } else {
+                document.getElementById('empty-state').classList.add('hidden');
+                renderGrid();
+            }
+        }
+
+        function updateSelectDropdowns() {
+            const select1 = document.getElementById('rule-student-1');
+            const select2 = document.getElementById('rule-student-2');
+            
+            const v1 = select1.value;
+            const v2 = select2.value;
+
+            select1.innerHTML = '<option value="">Alumne 1...</option>';
+            select2.innerHTML = '<option value="">Alumne 2...</option>';
+
+            students.forEach(s => {
+                select1.innerHTML += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+                select2.innerHTML += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+            });
+
+            select1.value = v1;
+            select2.value = v2;
+        }
+
+        function addRestriction() {
+            const s1 = document.getElementById('rule-student-1').value;
+            const s2 = document.getElementById('rule-student-2').value;
+
+            if(!s1 || !s2) {
+                showToast("Selecciona dos alumnes per a la restricció.");
+                return;
+            }
+            if(s1 === s2) {
+                showToast("Tria dos alumnes diferents.");
+                return;
+            }
+
+            // Check if already exists
+            const exists = restrictions.some(r => (r[0] === s1 && r[1] === s2) || (r[0] === s2 && r[1] === s1));
+            if(exists) {
+                showToast("Aquesta restricció ja existeix.");
+                return;
+            }
+
+            restrictions.push([s1, s2]);
+            renderRestrictions();
+            renderGrid();
+            showToast(`Restricció afegida: ${s1} ❌ ${s2}`);
+        }
+
+        function removeRestriction(index) {
+            restrictions.splice(index, 1);
+            renderRestrictions();
+            renderGrid();
+        }
+
+        function renderRestrictions() {
+            const list = document.getElementById('restrictions-list');
+            list.innerHTML = '';
+
+            if(restrictions.length === 0) {
+                list.innerHTML = '<span class="text-[11px] text-slate-400 italic">Sense restriccions actiu.</span>';
+                return;
+            }
+
+            restrictions.forEach((r, idx) => {
+                const badge = document.createElement('div');
+                badge.className = 'flex items-center justify-between bg-red-50 border border-red-200 text-red-700 px-2.5 py-1 rounded-lg text-xs';
+                badge.innerHTML = `
+                    <span><b>${escapeHtml(r[0])}</b> ↔️ <b>${escapeHtml(r[1])}</b></span>
+                    <button onclick="removeRestriction(${idx})" class="text-red-400 hover:text-red-600 ml-2">
+                        <i class="fa-solid fa-[#ef4444] fa-xmark"></i>
+                    </button>
+                `;
+                list.appendChild(badge);
+            });
+        }
+
+        function shuffleStudentsWithRules() {
+            if(students.length <= 1) return;
+
+            let bestOrder = [...students];
+            let minConflicts = 999;
+
+            // Intentem 100 combinacions diferents per trobar-ne una sense conflictes de restricció
+            for (let attempt = 0; attempt < 100; attempt++) {
+                let current = [...students];
+                for (let i = current.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [current[i], current[j]] = [current[j], current[i]];
+                }
+
+                const conflicts = evaluateConflicts(current);
+                if (conflicts === 0) {
+                    bestOrder = current;
+                    minConflicts = 0;
+                    break;
+                } else if (conflicts < minConflicts) {
+                    minConflicts = conflicts;
+                    bestOrder = current;
+                }
+            }
+
+            students = bestOrder;
+            document.getElementById('student-input').value = students.join('\n');
+            renderGrid();
+
+            if (minConflicts === 0) {
+                showToast("S'han barrejat respectant totes les restriccions!");
+            } else {
+                showToast("S'ha barrejat (Queden conflictes no resolts)");
+            }
+        }
+
+        // Retorna quants conflictes de restricció existeixen amb la distribució actual
+        function evaluateConflicts(arr) {
+            let conflicts = 0;
+
+            restrictions.forEach(([s1, s2]) => {
+                if (areAdjacent(s1, s2, arr)) {
+                    conflicts++;
+                }
+            });
+
+            return conflicts;
+        }
+
+        // Comprova si dos alumnes estan asseguts en posicions adjacents segons la distribució actual
+        function areAdjacent(s1, s2, arr) {
+            const idx1 = arr.indexOf(s1);
+            const idx2 = arr.indexOf(s2);
+
+            if (idx1 === -1 || idx2 === -1) return false;
+
+            if (currentLayout === 'u-shape') {
+                const topCount = Math.ceil(arr.length * 0.4);
+                const sideCount = Math.floor((arr.length - topCount) / 2);
+                
+                const getWing = (idx) => {
+                    if (idx < sideCount) return 'left';
+                    if (idx < sideCount + topCount) return 'top';
+                    return 'right';
+                };
+
+                const wing1 = getWing(idx1);
+                const wing2 = getWing(idx2);
+
+                return wing1 === wing2 && Math.abs(idx1 - idx2) === 1;
+            } else {
+                let groupSize = 4;
+                if (currentLayout === 'groups-3') groupSize = 3;
+                else if (currentLayout === 'groups-6') groupSize = 6;
+                else if (currentLayout === 'pairs') groupSize = 2;
+                else if (currentLayout === 'individual') groupSize = 1;
+
+                if (groupSize === 1) return false;
+
+                const group1 = Math.floor(idx1 / groupSize);
+                const group2 = Math.floor(idx2 / groupSize);
+
+                if (group1 === group2) {
+                    if (groupSize === 4) {
+                        // Layout 2x2: Adjacents si són a la mateixa fila o la mateixa columna
+                        const pos1 = idx1 % 4;
+                        const pos2 = idx2 % 4;
+                        const row1 = Math.floor(pos1 / 2), col1 = pos1 % 2;
+                        const row2 = Math.floor(pos2 / 2), col2 = pos2 % 2;
+
+                        return (row1 === row2 && Math.abs(col1 - col2) === 1) || 
+                               (col1 === col2 && Math.abs(row1 - row2) === 1);
+                    } else if (groupSize === 6) {
+                        // Layout 2x3: Adjacents en horitzontal o vertic.
+                        const pos1 = idx1 % 6;
+                        const pos2 = idx2 % 6;
+                        const row1 = Math.floor(pos1 / 3), col1 = pos1 % 3;
+                        const row2 = Math.floor(pos2 / 3), col2 = pos2 % 3;
+
+                        return (row1 === row2 && Math.abs(col1 - col2) === 1) || 
+                               (col1 === col2 && Math.abs(row1 - row2) === 1);
+                    } else {
+                        // Per a línies (3 en línia, parelles) són adjacents si difereixen en 1
+                        return Math.abs(idx1 - idx2) === 1;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function changeLayout(layoutType) {
+            currentLayout = layoutType;
+            
+            document.querySelectorAll('.layout-btn').forEach(btn => {
+                btn.classList.remove('border-brand-500', 'bg-brand-50');
+                btn.classList.add('border-slate-200');
+                const icon = btn.querySelector('i');
+                if(icon) {
+                    icon.classList.remove('text-brand-600');
+                    icon.classList.add('text-slate-500');
+                }
+            });
+
+            if (event && event.currentTarget && event.currentTarget.classList) {
+                const activeBtn = event.currentTarget;
+                activeBtn.classList.remove('border-slate-200');
+                activeBtn.classList.add('border-brand-500', 'bg-brand-50');
+                const icon = activeBtn.querySelector('i');
+                if(icon) {
+                    icon.classList.remove('text-slate-500');
+                    icon.classList.add('text-brand-600');
+                }
+            }
+
+            renderGrid();
+        }
+
+        function togglePissarra() {
+            const checked = document.getElementById('toggle-pissarra').checked;
+            const container = document.getElementById('pissarra-container');
+            if(checked) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        // Main Renderer Logic
+        function renderGrid() {
+            const grid = document.getElementById('classroom-grid');
+            grid.innerHTML = '';
+
+            if (students.length === 0) return;
+
+            const showNumbers = document.getElementById('toggle-numeracio').checked;
+
+            if (currentLayout === 'groups-4') {
+                renderClusterLayout(grid, 4, 'Equip', showNumbers);
+            } else if (currentLayout === 'groups-3') {
+                renderClusterLayout(grid, 3, 'Taula de 3', showNumbers);
+            } else if (currentLayout === 'groups-6') {
+                renderClusterLayout(grid, 6, 'Taula Gran', showNumbers);
+            } else if (currentLayout === 'pairs') {
+                renderClusterLayout(grid, 2, 'Parella', showNumbers);
+            } else if (currentLayout === 'u-shape') {
+                renderUShapeLayout(grid, showNumbers);
+            } else if (currentLayout === 'individual') {
+                renderClusterLayout(grid, 1, 'Fila', showNumbers);
+            }
+        }
+
+        function renderClusterLayout(container, groupSize, labelPrefix, showNumbers) {
+            const totalGroups = Math.ceil(students.length / groupSize);
+
+            for (let g = 0; g < totalGroups; g++) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'bg-slate-100/80 border-2 border-dashed border-slate-300 rounded-2xl p-3 flex flex-col gap-2 items-center justify-center min-w-[160px] shadow-sm relative transition-all';
+                
+                if (showNumbers) {
+                    const badge = document.createElement('span');
+                    badge.className = 'absolute -top-3 left-3 bg-slate-200 border border-slate-300 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider';
+                    badge.innerText = `${labelPrefix} ${g + 1}`;
+                    groupDiv.appendChild(badge);
+                }
+
+                const deskGrid = document.createElement('div');
+                if (groupSize === 3) {
+                    deskGrid.className = 'flex flex-row gap-2 mt-1';
+                } else if (groupSize === 4) {
+                    deskGrid.className = 'grid grid-cols-2 gap-2 mt-1';
+                } else if (groupSize === 6) {
+                    deskGrid.className = 'grid grid-cols-3 gap-2 mt-1';
+                } else if (groupSize === 2) {
+                    deskGrid.className = 'grid grid-cols-2 gap-2 mt-1';
+                } else {
+                    deskGrid.className = 'flex flex-col gap-2 mt-1';
+                }
+
+                for (let i = 0; i < groupSize; i++) {
+                    const studentIndex = g * groupSize + i;
+                    if (studentIndex < students.length) {
+                        const sName = students[studentIndex];
+                        const hasConflict = checkStudentConflict(sName);
+                        const card = createStudentCard(sName, studentIndex, hasConflict);
+                        deskGrid.appendChild(card);
+                    } else {
+                        const emptySlot = document.createElement('div');
+                        emptySlot.className = 'w-24 sm:w-28 h-12 rounded-xl border border-dashed border-slate-300 bg-white/40 flex items-center justify-center text-slate-300 text-xs italic';
+                        emptySlot.innerText = 'Buit';
+                        deskGrid.appendChild(emptySlot);
+                    }
+                }
+
+                groupDiv.appendChild(deskGrid);
+                container.appendChild(groupDiv);
+            }
+        }
+
+        function renderUShapeLayout(container, showNumbers) {
+            container.className = "w-full flex flex-col items-center gap-6 py-4";
+
+            const topCount = Math.ceil(students.length * 0.4);
+            const sideCount = Math.floor((students.length - topCount) / 2);
+            const rightCount = students.length - topCount - sideCount;
+
+            const topRow = document.createElement('div');
+            topRow.className = "flex flex-wrap justify-center gap-2 p-3 bg-slate-100/80 border-2 border-dashed border-slate-300 rounded-2xl max-w-full";
+            
+            const sidesContainer = document.createElement('div');
+            sidesContainer.className = "w-full flex justify-between gap-4 sm:gap-12 px-2 sm:px-8";
+
+            const leftWing = document.createElement('div');
+            leftWing.className = "flex flex-col gap-2 p-3 bg-slate-100/80 border-2 border-dashed border-slate-300 rounded-2xl";
+
+            const rightWing = document.createElement('div');
+            rightWing.className = "flex flex-col gap-2 p-3 bg-slate-100/80 border-2 border-dashed border-slate-300 rounded-2xl";
+
+            let idx = 0;
+
+            for (let i = 0; i < sideCount && idx < students.length; i++, idx++) {
+                const sName = students[idx];
+                leftWing.appendChild(createStudentCard(sName, idx, checkStudentConflict(sName)));
+            }
+
+            for (let i = 0; i < topCount && idx < students.length; i++, idx++) {
+                const sName = students[idx];
+                topRow.appendChild(createStudentCard(sName, idx, checkStudentConflict(sName)));
+            }
+
+            for (let i = 0; i < rightCount && idx < students.length; i++, idx++) {
+                const sName = students[idx];
+                rightWing.appendChild(createStudentCard(sName, idx, checkStudentConflict(sName)));
+            }
+
+            sidesContainer.appendChild(leftWing);
+            sidesContainer.appendChild(rightWing);
+
+            container.appendChild(topRow);
+            container.appendChild(sidesContainer);
+        }
+
+        function checkStudentConflict(studentName) {
+            return restrictions.some(([s1, s2]) => {
+                if (s1 === studentName && areAdjacent(s1, s2, students)) return true;
+                if (s2 === studentName && areAdjacent(s2, s1, students)) return true;
+                return false;
+            });
+        }
+
+        // Create Individual Student Card
+        function createStudentCard(name, index, hasConflict = false) {
+            const card = document.createElement('div');
+            
+            const baseStyle = 'student-card w-24 sm:w-28 h-12 border rounded-xl shadow-sm hover:shadow-md flex items-center justify-between px-2.5 cursor-grab active:cursor-grabbing transition-all duration-150 group relative';
+            const conflictStyle = hasConflict ? 'bg-red-50 border-red-400 text-red-900 ring-2 ring-red-300' : 'bg-white border-slate-200 text-slate-700';
+            
+            card.className = `${baseStyle} ${conflictStyle}`;
+            card.setAttribute('draggable', 'true');
+            card.setAttribute('data-index', index);
+
+            const colors = ['bg-sky-400', 'bg-emerald-400', 'bg-amber-400', 'bg-purple-400', 'bg-indigo-400', 'bg-teal-400'];
+            const accentColor = hasConflict ? 'bg-red-500' : colors[index % colors.length];
+
+            card.innerHTML = `
+                <div class="flex items-center gap-1.5 overflow-hidden">
+                    <div class="w-1.5 h-6 ${accentColor} rounded-full flex-shrink-0"></div>
+                    <span class="font-semibold text-xs sm:text-sm truncate leading-tight">${escapeHtml(name)}</span>
+                </div>
+                ${hasConflict 
+                    ? '<i class="fa-solid fa-[#ef4444] fa-triangle-exclamation text-red-500 text-xs" title="Violació de restricció!"></i>' 
+                    : '<i class="fa-solid fa-[#cbd5e1] fa-grip-vertical text-slate-300 group-hover:text-slate-400 text-xs no-print"></i>'
+                }
+            `;
+
+            // Mouse Drag Events
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragover', handleDragOver);
+            card.addEventListener('dragleave', handleDragLeave);
+            card.addEventListener('drop', handleDrop);
+            card.addEventListener('dragend', handleDragEnd);
+
+            // Touch Drag Support for Mobile/Tablets
+            card.addEventListener('touchstart', handleTouchStart, {passive: false});
+            card.addEventListener('touchmove', handleTouchMove, {passive: false});
+            card.addEventListener('touchend', handleTouchEnd);
+
+            return card;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+
+        function handleDragStart(e) {
+            draggedIndex = parseInt(this.getAttribute('data-index'));
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedIndex);
+            this.classList.add('opacity-40', 'scale-95');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            this.classList.add('drag-over');
+            return false;
+        }
+
+        function handleDragLeave() {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            this.classList.remove('drag-over');
+            const targetIndex = parseInt(this.getAttribute('data-index'));
+
+            if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                swapStudents(draggedIndex, targetIndex);
+            }
+
+            return false;
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('opacity-40', 'scale-95');
+            document.querySelectorAll('.student-card').forEach(card => {
+                card.classList.remove('drag-over');
+            });
+        }
+
+        // Touch Handlers for Touchscreens
+        function handleTouchStart(e) {
+            draggedIndex = parseInt(this.getAttribute('data-index'));
+            touchDragElement = this;
+            this.classList.add('opacity-40', 'scale-95');
+        }
+
+        function handleTouchMove(e) {
+            if (!touchDragElement) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            const cardTarget = target ? target.closest('.student-card') : null;
+
+            document.querySelectorAll('.student-card').forEach(c => c.classList.remove('drag-over'));
+            if (cardTarget && cardTarget !== touchDragElement) {
+                cardTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchDragElement) return;
+            touchDragElement.classList.remove('opacity-40', 'scale-95');
+            
+            const changedTouch = e.changedTouches[0];
+            const target = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+            const cardTarget = target ? target.closest('.student-card') : null;
+
+            if (cardTarget) {
+                const targetIndex = parseInt(cardTarget.getAttribute('data-index'));
+                if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                    swapStudents(draggedIndex, targetIndex);
+                }
+            }
+
+            document.querySelectorAll('.student-card').forEach(c => c.classList.remove('drag-over'));
+            touchDragElement = null;
+            draggedIndex = null;
+        }
+
+        function swapStudents(fromIdx, toIdx) {
+            const temp = students[fromIdx];
+            students[fromIdx] = students[toIdx];
+            students[toIdx] = temp;
+
+            document.getElementById('student-input').value = students.join('\n');
+            renderGrid();
+            showToast(`S'ha intercanviat ${students[toIdx]} per ${students[fromIdx]}`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.innerText = msg;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
